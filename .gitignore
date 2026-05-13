@@ -1,0 +1,61 @@
+# ============================================================
+#  PRIZM BUILD - Python / Suricata Utility .gitignore
+# ============================================================
+
+# Python cache / compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# Logs / exports
+logs/
+*.log
+*.jsonl
+
+# Suricata local copies
+eve.json
+fast.log
+stats.log
+suricata.log
+
+# Compressed captures / pcaps
+*.pcap
+*.pcapng
+*.cap
+
+# Runtime temp files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Build / packaging
+dist/
+build/
+*.egg-info/
+
+# Local test artifacts
+test_output/
+exports/
+
+# Optional screenshots folder
+screenshots/*.tmp
