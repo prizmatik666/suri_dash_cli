@@ -1,11 +1,17 @@
 # Suricata PRIZM Utilities
 
 https://www.github.com/prizmatik666/suri_dash_cli
+
 a Prizmatik Underground production
+
 SDASH SCREEN SHOT
+
 <img width="1055" height="1491" alt="image" src="https://github.com/user-attachments/assets/f5f8db14-9be9-41d2-8b35-c6ba0d8e8dbb" />
+
 SLOG SCREEN SHOTS
+
 <img width="405" height="304" alt="image" src="https://github.com/user-attachments/assets/dcce3c19-896c-4ec2-adf5-5fb1dc9cc6e0" />
+
 <img width="386" height="253" alt="image" src="https://github.com/user-attachments/assets/9dd5ac40-ce71-4b51-8f33-7eec2c9949c1" />
 
 <img width="1444" height="1089" alt="image" src="https://github.com/user-attachments/assets/551cf354-961d-4b6d-975d-18e8a9771c51" />
