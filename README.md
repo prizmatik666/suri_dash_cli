@@ -20,7 +20,8 @@ Both tools are designed for readable terminal workflows, SSH/tmux usage, and sma
 Current release target:
 
 ```text
-v0.1.0
+v3.2 and v0.1.0
+sdash.py // slog.py
 ```
 
 These utilities are lab-ready, but not intended to replace a full SIEM, SOC platform, or enterprise Suricata deployment stack.
