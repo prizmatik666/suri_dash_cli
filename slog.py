@@ -139,8 +139,8 @@ def pause():
 
 def banner():
     print(c("╔════════════════════════════════════════════╗", "cyan"))
-    print(c(f"║        {APP_NAME} {APP_VERSION:<18} ║", "cyan"))
-    print(c(f"║        {APP_BRAND:<28} ║", "cyan"))
+    print(c(f"║        {APP_NAME} {APP_VERSION:<18}  ║", "cyan"))
+    print(c(f"║        {APP_BRAND:<28}        ║", "cyan"))
     print(c("╚════════════════════════════════════════════╝", "cyan"))
 
 
