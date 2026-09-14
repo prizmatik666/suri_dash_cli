@@ -1,0 +1,5 @@
+.env
+suri_example.md
+context*
+*.bak*
+__pycache__

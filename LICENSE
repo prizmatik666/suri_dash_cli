@@ -1,0 +1,114 @@
+suri_dash_cli Noncommercial License
+Version 1.0
+
+Copyright (c) 2026 prizmatik666
+
+All rights reserved except as expressly granted under this license.
+
+1. Permission
+
+Permission is granted, free of charge, to any person obtaining a copy of this software and its associated documentation (the "Software") to use, copy, study, modify, and create derivative works from the Software solely for permitted noncommercial purposes.
+
+Permitted noncommercial purposes include:
+
+* Personal use
+* Educational use
+* Academic study
+* Independent learning
+* Hobby projects
+* Noncommercial cybersecurity research
+* Defensive security research and experimentation
+* Testing performed in environments that the user owns or is explicitly authorized to test
+* Contributing modifications, fixes, documentation, or other improvements back to the project
+
+2. Forking and Redistribution
+
+You may fork, modify, and redistribute the Software or derivative works for noncommercial purposes provided that:
+
+* This license is included with the redistributed Software.
+* The original copyright notice is retained.
+* You do not represent yourself as the original author of the Software.
+* You clearly identify substantial modifications you have made.
+* Redistribution remains subject to these same noncommercial restrictions.
+
+You may not remove or alter copyright, attribution, or licensing notices included with the Software.
+
+3. Commercial Use Prohibited
+
+The Software may not be used for commercial purposes without prior written permission from the copyright holder.
+
+Prohibited commercial use includes, but is not limited to:
+
+* Selling the Software or copies of the Software
+* Selling modified versions or derivative works
+* Including the Software in a commercial product
+* Including the Software in a paid software package, appliance, or service
+* Offering the Software or a derivative work as a paid hosted or managed service
+* Charging customers specifically for access to, operation of, or functionality substantially provided by the Software
+* Using the Software as a material component of a product or service offered for commercial advantage or monetary compensation
+* Relicensing the Software under terms that permit commercial use
+
+Commercial entities, businesses, consultants, contractors, managed security providers, and other for-profit organizations must obtain permission from the copyright holder before using the Software as part of revenue-generating work, paid services, or commercial products.
+
+Possession of a copy of the Software does not grant commercial-use rights.
+
+4. Security Research
+
+Use of the Software for legitimate, authorized, noncommercial cybersecurity research is permitted.
+
+This license does not grant permission to access, monitor, test, interfere with, or attack systems, networks, devices, accounts, or data without authorization.
+
+Users are solely responsible for ensuring that their use of the Software complies with applicable laws and that they possess any authorization required for the systems they test or monitor.
+
+5. Ownership
+
+The copyright holder retains all ownership rights in the original Software.
+
+Permission to use, modify, fork, or redistribute the Software under this license does not transfer ownership of the Software or its copyright.
+
+Contributors retain copyright in their own original contributions unless they explicitly assign those rights otherwise.
+
+6. Commercial Licensing
+
+The copyright holder may separately license the Software for commercial use.
+
+Nothing in this license prevents the copyright holder from:
+
+* Selling commercial licenses
+* Granting commercial-use permission to specific individuals or organizations
+* Offering the Software under different license terms
+* Incorporating the Software into commercial products or services
+* Changing the license applied to future versions of the Software
+
+Commercial-use permission must be obtained directly from the copyright holder.
+
+7. No Trademark License
+
+This license does not grant permission to use the names, logos, trademarks, branding, or other identifying marks associated with the Software or its copyright holder, except as reasonably necessary to describe the origin of the Software.
+
+8. Termination
+
+Any rights granted under this license automatically terminate if you violate its terms.
+
+Upon termination, you must stop exercising the rights granted by this license and stop distributing versions of the Software that violate these terms.
+
+The copyright holder may provide written permission to restore rights following a violation.
+
+9. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, RELIABILITY, SECURITY, OR NON-INFRINGEMENT.
+
+USE OF THE SOFTWARE IS ENTIRELY AT YOUR OWN RISK.
+
+10. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER AND CONTRIBUTORS SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS, LIABILITY, DATA LOSS, SECURITY INCIDENT, SERVICE INTERRUPTION, OR OTHER CONSEQUENCE ARISING FROM THE SOFTWARE OR ITS USE, WHETHER IN CONTRACT, TORT, OR OTHERWISE.
+
+11. No Implied Rights
+
+Any right not expressly granted by this license is reserved by the copyright holder.
+
+If you wish to use the Software in a manner not permitted by this license, including commercial use, you must obtain prior written permission from the copyright holder.
+
+By using, copying, modifying, or distributing the Software, you acknowledge and agree to the terms of this license.
+
