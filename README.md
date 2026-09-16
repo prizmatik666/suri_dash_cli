@@ -21,13 +21,14 @@ It stores user preferences under `~/.config/sdash/config.json`. The built-in v3.
 
 ```bash
 git clone https://www.github.com/prizmatik666/suri_dash_cli.git
-cd suricata_new
+cd suri_dash_cli/
 ```
 
 Run the dashboard:
 
 ```bash
 python3 sdash.py --log /var/log/suricata/eve.json
+or -> python3 sdash.py
 ```
 
 Configure an interface interactively, with validation and a timestamped backup:
@@ -54,7 +55,6 @@ Suricata must actually capture the traffic of interest and produce decodable Eth
 
 The dashboard’s scan messages are flow-based heuristics. They are distinct from native Suricata `event_type: "alert"` records. The included rules count matching packets/rule matches; they do not calculate unique destination ports or hosts.
 
-Do not commit `.env`, API keys, raw EVE logs, private addresses, credentials, or other sensitive telemetry.
 
 ## Documentation
 
