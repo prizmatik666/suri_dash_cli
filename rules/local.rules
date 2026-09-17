@@ -2,12 +2,10 @@ alert ssh !$HOME_NET any -> $HOME_NET 22 (msg:"LOCAL SSH inbound connection to s
 alert ssh !$HOME_NET any -> $HOME_NET 22 (msg:"LOCAL SSH possible brute force - repeated inbound connections"; flow:to_server,established; detection_filter:track by_src,count 5,seconds 60; sid:1001002; rev:1;)
 alert ssh $HOME_NET any -> !$HOME_NET 22 (msg:"LOCAL SSH outbound connection from internal host"; flow:to_server,established; sid:1001003; rev:1;)
 
-# Local IDS reconnaissance indicators. These count matching packets/rule matches,
-# not unique destination ports or unique destination hosts. Suricata 8.0.6 on the
-# reference installation accepted source-IP tracking; source/destination-pair
-# tracking was rejected by its installed parser. Priority 2 indicates attempted
-# reconnaissance. SIDs
-# 1001101-1001103 are reserved locally. Added 2026-09-14.
-alert tcp $HOME_NET any -> $HOME_NET any (msg:"LOCAL SCAN Possible internal TCP SYN source probe rate"; tcp.flags:S,CE; detection_filter:track by_src,count 10,seconds 10; classtype:attempted-recon; priority:2; sid:1001101; rev:3;)
-alert tcp $HOME_NET any -> $HOME_NET any (msg:"LOCAL SCAN Possible broad TCP SYN probe rate"; tcp.flags:S,CE; detection_filter:track by_src,count 25,seconds 10; classtype:attempted-recon; priority:2; sid:1001102; rev:1;)
-alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"EXTERNAL SCAN Possible inbound TCP SYN source probe rate"; tcp.flags:S,CE; detection_filter:track by_src,count 10,seconds 10; classtype:attempted-recon; priority:2; sid:1001103; rev:2;)
+# Local IDS reconnaissance indicators. These are SYN packet-rate heuristics;
+# they do not count unique destination hosts or unique destination ports.
+# threshold:type both intentionally limits duplicate alerts after each threshold;
+# SIDs 1001101-1001103 are locally reserved. Added 2026-09-17.
+alert tcp $HOME_NET any -> $HOME_NET any (msg:"LOCAL SCAN Possible TCP SYN burst to internal host"; tcp.flags:S,CE; threshold: type both, track by_both, count 10, seconds 10; classtype:attempted-recon; priority:2; sid:1001101; rev:3;)
+alert tcp $HOME_NET any -> $HOME_NET any (msg:"LOCAL SCAN Possible broad TCP SYN burst from internal host"; tcp.flags:S,CE; threshold: type both, track by_src, count 25, seconds 10; classtype:attempted-recon; priority:2; sid:1001102; rev:2;)
+alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"EXTERNAL SCAN Possible inbound TCP SYN burst"; tcp.flags:S,CE; threshold: type both, track by_src, count 10, seconds 10; classtype:attempted-recon; priority:2; sid:1001103; rev:2;)
