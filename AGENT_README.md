@@ -4,6 +4,13 @@
 
 ## Setup
 
+A virtual environment is recommended for dependency isolation, but it is not
+required and the agent does not create one automatically. If `requests` and
+`python-dotenv` are already installed for the selected Python interpreter, run
+the API-key setup and agent directly with `python3`.
+
+Recommended isolated setup:
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -11,7 +18,27 @@ python3 -m pip install -r requirements.txt
 python3 setup_openai_env.py
 ```
 
+No-venv setup on Debian or Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install python3-requests python3-dotenv
+python3 setup_openai_env.py
+python3 suricata_agent.py --eve-log /var/log/suricata/eve.json
+```
+
+On systems that permit Python user-site package installation, the dependencies
+can instead be installed without a virtual environment using:
+
+```bash
+python3 -m pip install --user -r requirements.txt
+python3 setup_openai_env.py
+python3 suricata_agent.py --eve-log /var/log/suricata/eve.json
+```
+
 The setup helper prompts without echoing the API key, writes a project-local `.env`, and applies owner-only permissions (`0600`). Do not commit `.env`.
+The `.env` API-key file is independent of a `.venv` Python environment and is
+loaded automatically when the agent starts.
 
 ## Interactive UI
 

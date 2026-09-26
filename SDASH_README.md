@@ -4,6 +4,10 @@
 
 ## Run
 
+`sdash.py` uses the Python standard library and local project modules. It does
+not require a virtual environment, dependency installation, or an OpenAI API
+key.
+
 ```bash
 python3 sdash.py --log /var/log/suricata/eve.json
 ```
