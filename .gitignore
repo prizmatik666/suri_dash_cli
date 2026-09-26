@@ -1,5 +1,11 @@
 .env
+.21
 suri_example.md
 context*
+fingerprint_*/
 *.bak*
-__pycache__
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+backups/

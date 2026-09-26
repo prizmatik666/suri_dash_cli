@@ -344,6 +344,39 @@ def detect_scan(src, dst, dport):
         add_scan(f"LIGHT SERVICE PROBE {display_pair} ports={sorted(rec['ports'])}")
 
 
+def dns_query_name(dns):
+    if not isinstance(dns, dict):
+        return "?"
+
+    queries = dns.get("queries")
+    if isinstance(queries, list):
+        for query in queries:
+            if not isinstance(query, dict):
+                continue
+            qname = query.get("rrname")
+            if isinstance(qname, str) and qname:
+                qname = qname.rstrip(".")
+                if qname:
+                    return qname
+
+    qname = dns.get("rrname")
+    if isinstance(qname, str) and qname:
+        qname = qname.rstrip(".")
+        if qname:
+            return qname
+
+    # Preserve compatibility with the older nested shape already supported by sdash.
+    query = dns.get("query")
+    if isinstance(query, dict):
+        qname = query.get("rrname")
+        if isinstance(qname, str) and qname:
+            qname = qname.rstrip(".")
+            if qname:
+                return qname
+
+    return "?"
+
+
 def summarize(e):
     et = e.get("event_type", "?")
     ts = e.get("timestamp", "")
@@ -394,8 +427,7 @@ def summarize(e):
 
     if et == "dns":
         dns = e.get("dns", {})
-        q = dns.get("rrname", "") or dns.get("query", {}).get("rrname", "")
-        q = q.rstrip(".") if q else "?"
+        q = dns_query_name(dns)
 
         if src:
             dns_client_counts[src] += 1
