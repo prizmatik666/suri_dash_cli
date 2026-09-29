@@ -151,6 +151,33 @@ every OpenAI model or endpoint-specific model supports those capabilities; see
 the [model catalog](https://developers.openai.com/api/docs/models) and
 [Responses API quickstart](https://platform.openai.com/docs/quickstart/make-your-first-api-request).
 
+## Choosing the Agent Model
+
+The agent defaults to `gpt-6-sol`. Its stronger reasoning can be useful for
+complex investigations, but it may be cost-intensive. For a lower-cost balance
+of capability and price, we recommend `gpt-5.6-terra` as a starting point.
+
+To change the model or reasoning effort, edit the project `.env` file and add
+or update these settings:
+
+```dotenv
+OPENAI_MODEL=gpt-5.6-terra
+OPENAI_REASONING_EFFORT=medium
+```
+
+Use the model ID exactly as shown: `gpt-5.6-terra` (with a hyphen between
+`5.6` and `terra`). Reasoning-effort options are model-specific; `medium` is a
+balanced setting supported by GPT-5.6. Check the selected model's current API
+documentation before choosing a different effort. Restart the agent after
+editing `.env` for the settings to take effect.
+
+The current cost estimator reports an estimate only for the default
+`gpt-6-sol` model. Token-usage reporting continues to work with other models,
+but the estimated cost is shown as unavailable until that model is added to
+the estimator. The selected model must also be enabled for your OpenAI API
+account and support the Responses API and function calling used by this agent.
+
+
 For example, `gpt-4o-mini` can use the current request format when it is enabled
 for your account. The agent does not send a reasoning-effort option for that
 model by default:
