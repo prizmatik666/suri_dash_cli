@@ -15,17 +15,21 @@
 # ============================================================
 
 import argparse
+import curses
 import gzip
+import itertools
 import json
 import os
 import shutil
+import stat
 import sys
 import textwrap
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 
 APP_NAME = "suri-log-viewer"
-APP_VERSION = "v0.1.0"
+APP_VERSION = "v0.2.0"
 APP_BRAND = "PRIZM BUILD"
 
 DEFAULT_LOG_DIR = Path("/var/log/suricata")
@@ -203,29 +207,158 @@ def validate_log_file(path):
 
     if not os.access(path, os.R_OK):
         print(c(f"[!] Permission denied reading: {path}", "red"))
-        print(c("[*] Try running with sudo.", "yellow"))
+        print(c("[*] Check file/group read permission and parent-directory search permission.", "yellow"))
         return False
 
     return True
 
 
-def read_text_file(path):
-    if path.suffix == ".gz":
-        with gzip.open(path, "rt", errors="replace") as f:
-            return f.read()
-
-    with open(path, "r", errors="replace") as f:
-        return f.read()
+def read_text_file(path, limit=0, tail_mode=False):
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", errors="replace") as stream:
+        if not limit:
+            return stream.read()
+        if tail_mode:
+            return "".join(deque(stream, maxlen=limit))
+        return "".join(itertools.islice(stream, limit))
 
 
 def list_logs(log_dir):
     files = []
+    for path in log_dir.iterdir():
+        try:
+            info = path.stat()
+        except OSError:
+            continue  # A rotated or inaccessible entry should not hide other logs.
+        if stat.S_ISREG(info.st_mode):
+            files.append((info.st_mtime, path))
+    return [path for _, path in sorted(files, key=lambda item: item[0], reverse=True)]
 
-    for p in sorted(log_dir.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-        if p.is_file():
-            files.append(p)
 
-    return files
+def _picker_line(path):
+    try:
+        info = path.stat()
+    except OSError:
+        return f"{path.name}  (no longer available)"
+    stamp = datetime.fromtimestamp(info.st_mtime).strftime("%Y-%m-%d %H:%M")
+    return f"{path.name}  {pretty_size(info.st_size)}  {stamp}"
+
+
+def _picker_text(screen, row, text, width, attrs=0):
+    try:
+        screen.addnstr(row, 0, text, max(1, width - 1), attrs)
+    except curses.error:
+        pass  # Resizing can briefly make a draw land on the bottom-right cell.
+
+
+def _picker_search(screen, width):
+    height, _ = screen.getmaxyx()
+    screen.move(height - 1, 0)
+    screen.clrtoeol()
+    _picker_text(screen, height - 1, "Filter name: ", width)
+    screen.refresh()
+    curses.echo()
+    try:
+        try:
+            curses.curs_set(1)
+        except curses.error:
+            pass
+        raw = screen.getstr(height - 1, 13, max(1, width - 14))
+    finally:
+        curses.noecho()
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
+    return raw.decode("utf-8", errors="replace").strip()
+
+
+def _choose_log_screen(screen, logs, log_dir):
+    screen.keypad(True)
+    try:
+        curses.curs_set(0)
+    except curses.error:
+        pass
+    selected = 0
+    top = 0
+    query = ""
+    number = ""
+
+    while True:
+        height, width = screen.getmaxyx()
+        screen.erase()
+        if height < 7 or width < 30:
+            _picker_text(screen, 0, "Resize terminal (minimum 30 x 7); q quits.", width)
+            screen.refresh()
+            if screen.getch() in (ord("q"), ord("Q"), 27):
+                return None
+            continue
+
+        matching = [path for path in logs if query.lower() in path.name.lower()]
+        visible = height - 5
+        if matching:
+            selected = min(selected, len(matching) - 1)
+            top = min(top, max(0, len(matching) - visible))
+            if selected < top:
+                top = selected
+            elif selected >= top + visible:
+                top = selected - visible + 1
+        else:
+            selected = top = 0
+
+        _picker_text(screen, 0, f"{APP_NAME} - Select log", width, curses.A_BOLD)
+        _picker_text(screen, 1, f"{log_dir}  ({len(matching)}/{len(logs)} files)", width)
+        _picker_text(screen, 2, "Arrows/PgUp/PgDn move  digits jump  / filter  c clear  Enter open  q quit", width)
+        for row, index in enumerate(range(top, min(top + visible, len(matching))), start=3):
+            marker = ">" if index == selected else " "
+            line = f"{marker} {index + 1:>4}. {_picker_line(matching[index])}"
+            _picker_text(screen, row, line, width, curses.A_REVERSE if index == selected else 0)
+        if not matching:
+            _picker_text(screen, 3, "No filenames match. Press / to search again or c to clear.", width)
+        _picker_text(screen, height - 1,
+                     f"Showing {top + 1 if matching else 0}-{min(top + visible, len(matching))} of {len(matching)}"
+                     + (f"  |  filter: {query}" if query else "")
+                     + (f"  |  jump: {number}" if number else ""), width)
+        screen.refresh()
+
+        key = screen.getch()
+        if key in (ord("q"), ord("Q"), 27):
+            return None
+        if ord("0") <= key <= ord("9") and matching:
+            candidate = number + chr(key)
+            if not 1 <= int(candidate) <= len(matching):
+                candidate = chr(key)
+            if 1 <= int(candidate) <= len(matching):
+                number = candidate
+                selected = int(candidate) - 1
+        elif key == ord("/"):
+            query = _picker_search(screen, width)
+            selected = top = 0
+            number = ""
+        elif key == ord("c"):
+            query = ""
+            selected = top = 0
+            number = ""
+        elif key in (curses.KEY_UP, ord("k")) and matching:
+            number = ""
+            selected = max(0, selected - 1)
+        elif key in (curses.KEY_DOWN, ord("j")) and matching:
+            number = ""
+            selected = min(len(matching) - 1, selected + 1)
+        elif key == curses.KEY_PPAGE and matching:
+            number = ""
+            selected = max(0, selected - visible)
+        elif key == curses.KEY_NPAGE and matching:
+            number = ""
+            selected = min(len(matching) - 1, selected + visible)
+        elif key == curses.KEY_HOME and matching:
+            number = ""
+            selected = 0
+        elif key == curses.KEY_END and matching:
+            number = ""
+            selected = len(matching) - 1
+        elif key in (10, 13, curses.KEY_ENTER) and matching:
+            return matching[selected]
 
 
 def choose_log(log_dir):
@@ -235,33 +368,15 @@ def choose_log(log_dir):
         print(c(f"[!] No files found in {log_dir}", "red"))
         raise SystemExit(1)
 
-    while True:
-        clear()
-        banner()
-        print()
-
-        for i, p in enumerate(logs, 1):
-            st = p.stat()
-            stamp = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-            print(
-                f"{c(str(i).rjust(2), 'yellow')}. "
-                f"{c(p.name, 'bold')}  "
-                f"{c(pretty_size(st.st_size), 'green')}  "
-                f"{c(stamp, 'dim')}"
-            )
-
-        print(f"\n{c('Q', 'red')}. Quit")
-
-        choice = input(c("\nSelect log file: ", "cyan")).strip().lower()
-
-        if choice == "q":
-            raise SystemExit
-
-        if choice.isdigit() and 1 <= int(choice) <= len(logs):
-            return logs[int(choice) - 1]
-
-        print(c("Invalid selection.", "red"))
-        pause()
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise SystemExit("Interactive log selection needs a terminal; use --file for scripts.")
+    try:
+        selected = curses.wrapper(_choose_log_screen, logs, log_dir)
+    except KeyboardInterrupt:
+        raise SystemExit(130) from None
+    if selected is None:
+        raise SystemExit(0)
+    return selected
 
 
 def limit_lines(raw, limit, tail_mode):
@@ -291,6 +406,10 @@ def format_eve_json(raw, limit=None, tail_mode=False, event_type_filter=None):
             output.append(line)
             continue
 
+        if not isinstance(obj, dict):
+            output.append(line)
+            continue
+
         event = obj.get("event_type", "unknown")
 
         if event_type_filter and event != event_type_filter:
@@ -299,6 +418,21 @@ def format_eve_json(raw, limit=None, tail_mode=False, event_type_filter=None):
         output.append(format_eve_event(obj))
 
     return "\n\n".join(output)
+
+
+def dns_question(dns):
+    if not isinstance(dns, dict):
+        return "?", ""
+    queries = dns.get("queries")
+    if isinstance(queries, list):
+        for query in queries:
+            if isinstance(query, dict) and isinstance(query.get("rrname"), str) and query["rrname"].strip(". "):
+                return query["rrname"].rstrip("."), query.get("rrtype", "")
+    nested = dns.get("query")
+    for query in (dns, nested):
+        if isinstance(query, dict) and isinstance(query.get("rrname"), str) and query["rrname"].strip(". "):
+            return query["rrname"].rstrip("."), query.get("rrtype", "")
+    return "?", ""
 
 
 def format_eve_event(obj):
@@ -324,9 +458,7 @@ def format_eve_event(obj):
         )
 
     if event == "dns":
-        dns = obj.get("dns", {})
-        query = dns.get("query", {}).get("rrname") or dns.get("rrname", "")
-        rtype = dns.get("query", {}).get("rrtype") or dns.get("rrtype", "")
+        query, rtype = dns_question(obj.get("dns"))
 
         return f"{ts} | DNS | {src}:{sport} -> {dst}:{dport} | {query} {rtype}"
 
@@ -390,13 +522,18 @@ def colorize_line(line):
 def browse_text(text, page_lines=DEFAULT_PAGE_LINES):
     lines = text.splitlines()
     idx = 0
+    message = ""
 
     while True:
         clear()
         print(c(f"{APP_NAME} Pretty View - {APP_BRAND}", "bold"))
-        print(c(f"Lines {idx + 1}-{min(idx + page_lines, len(lines))} of {len(lines)}", "dim"))
-        print(c("Commands: [n]/Enter next  [p] previous  [g] top  [G] bottom  [q] quit viewer", "dim"))
+        first_line = idx + 1 if lines else 0
+        print(c(f"Lines {first_line}-{min(idx + page_lines, len(lines))} of {len(lines)}", "dim"))
         print("-" * shutil.get_terminal_size((100, 30)).columns)
+
+        if message:
+            print(c(message, "yellow"))
+            message = ""
 
         page = lines[idx:idx + page_lines]
         width = shutil.get_terminal_size((100, 30)).columns - 2
@@ -406,18 +543,34 @@ def browse_text(text, page_lines=DEFAULT_PAGE_LINES):
             for w in wrapped:
                 print(colorize_line(w))
 
-        cmd = input(c("\nviewer> ", "cyan")).strip()
+        # Keep controls adjacent to the prompt. A long or heavily wrapped page
+        # can scroll the header out of view on a short terminal.
+        print(c("Commands: n/Enter next | p previous | g first | G last | b back", "dim"))
+        print(c("q save/next options | x exit after this view | h help", "dim"))
+        try:
+            cmd = input(c("viewer> ", "cyan")).strip()
+        except EOFError:
+            return "exit"
+        normalized = cmd.lower()
 
-        if cmd in ("n", ""):
+        if normalized in ("n", "next", ""):
             idx = min(idx + page_lines, max(0, len(lines) - page_lines))
-        elif cmd == "p":
+        elif normalized in ("p", "prev", "previous"):
             idx = max(0, idx - page_lines)
-        elif cmd == "g":
-            idx = 0
-        elif cmd == "G":
+        elif cmd == "G" or normalized in ("bottom", "last"):
             idx = max(0, len(lines) - page_lines)
-        elif cmd.lower() == "q":
-            break
+        elif normalized in ("g", "top", "first"):
+            idx = 0
+        elif normalized in ("b", "back"):
+            return "back"
+        elif normalized in ("q", "quit", "close"):
+            return "close"
+        elif normalized in ("x", "exit"):
+            return "exit"
+        elif normalized in ("h", "help", "?"):
+            message = "n/Enter next; p previous; g first; G last; b returns to log list; q opens save/next options; x exits after this view."
+        else:
+            message = f"Unknown command: {cmd!r}. Type h for help."
 
 
 def ask_limit(default_limit):
@@ -428,9 +581,12 @@ def ask_limit(default_limit):
     print("2. First 2,000 events/lines")
     print("3. Whole file")
     print(f"4. Tail last {default_limit} raw lines")
+    print("b. Back to log selection")
 
     choice = input(c("\nSelection [1]: ", "cyan")).strip() or "1"
 
+    if choice.lower() in ("b", "back"):
+        return None
     if choice == "2":
         return 2000, False
     if choice == "3":
@@ -442,12 +598,15 @@ def ask_limit(default_limit):
 
 
 def clean_log(path, args, interactive=True):
-    raw = read_text_file(path)
-
     if interactive and not args.export_only and not args.file:
-        limit, tail_mode = ask_limit(args.limit)
+        selection = ask_limit(args.limit)
+        if selection is None:
+            return None
+        limit, tail_mode = selection
     else:
         limit, tail_mode = args.limit, args.tail
+
+    raw = read_text_file(path, limit=limit, tail_mode=tail_mode)
 
     if "eve.json" in path.name:
         return format_eve_json(
@@ -511,38 +670,46 @@ def main():
         sys.exit(1)
 
     log_dir = Path(args.log_dir).expanduser()
-    selected_log = resolve_log_file(args)
+    specified_log = resolve_log_file(args)
 
-    if selected_log:
+    while True:
+        selected_log = specified_log or choose_log(log_dir)
         if not validate_log_file(selected_log):
+            if specified_log:
+                sys.exit(1)
+            continue
+
+        clear()
+        banner()
+        print(c(f"\nSelected: {selected_log}", "green"))
+
+        try:
+            cleaned = clean_log(selected_log, args, interactive=True)
+        except PermissionError:
+            print(c("\nPermission denied. Check access to the file and its parent directory.", "red"))
             sys.exit(1)
-    else:
-        selected_log = choose_log(log_dir)
+        except Exception as e:
+            print(c(f"\nError reading log: {e}", "red"))
+            sys.exit(1)
 
-    clear()
-    banner()
-    print(c(f"\nSelected: {selected_log}", "green"))
+        if cleaned is None:
+            if specified_log:
+                return
+            continue
 
-    try:
-        cleaned = clean_log(selected_log, args, interactive=True)
-    except PermissionError:
-        print(c("\nPermission denied. Run with sudo.", "red"))
-        sys.exit(1)
-    except Exception as e:
-        print(c(f"\nError reading log: {e}", "red"))
-        sys.exit(1)
+        if args.export_only:
+            save_cleaned(cleaned, selected_log.name.replace(".gz", ""), args, force=True)
+            return
 
-    if args.export_only:
-        save_cleaned(cleaned, selected_log.name.replace(".gz", ""), args, force=True)
-        return
+        viewer_action = browse_text(cleaned, page_lines=args.page_lines)
+        if viewer_action == "back":
+            if specified_log:
+                return
+            continue
+        save_cleaned(cleaned, selected_log.name.replace(".gz", ""), args)
 
-    browse_text(cleaned, page_lines=args.page_lines)
-    save_cleaned(cleaned, selected_log.name.replace(".gz", ""), args)
-
-    if not args.file:
-        again = input(c("\nOpen another log? [Y/n]: ", "cyan")).strip().lower()
-        if again != "n":
-            main()
+        if specified_log or viewer_action == "exit" or input(c("\nOpen another log? [Y/n]: ", "cyan")).strip().lower() == "n":
+            return
 
 
 if __name__ == "__main__":

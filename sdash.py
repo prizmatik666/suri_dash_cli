@@ -5,12 +5,13 @@ import curses
 import ipaddress
 import json
 import os
+import shlex
 import sys
 import time
 from collections import Counter, defaultdict, deque
 from pathlib import Path
 
-from sdash_defaults import FACTORY_DEFAULTS, default_config_path, effective_config
+from core.sdash_defaults import FACTORY_DEFAULTS, default_config_path, effective_config
 
 APP_NAME = "sdash"
 # Public dashboard release branding shown in the terminal title.
@@ -44,6 +45,7 @@ port_counts = Counter()
 smb_counts = Counter()
 dns_client_counts = Counter()
 dns_domain_counts = Counter()
+dns_resolver_pairs = set()
 
 scan_tracker = defaultdict(lambda: {
     "ports": set(),
@@ -172,8 +174,12 @@ def validate_startup(args):
 
     if not os.access(log_path, os.R_OK):
         print(f"[!] Log file is not readable: {log_path}")
-        print("[*] Try running with sudo:")
-        print(f"    sudo {APP_NAME} --log {log_path}")
+        print("[*] Check file read and parent-directory search permissions:")
+        print(f"    namei -l {shlex.quote(str(log_path))}")
+        print(f"    stat -c '%a %U:%G %n' {shlex.quote(str(log_path))}")
+        print("    id -nG")
+        print("[*] Configure a trusted log group through suricata_agent_config.py (option 10),")
+        print("    then start a new login session and run sdash without sudo.")
         return False
 
     if args.scan_threshold < 1:
@@ -211,6 +217,7 @@ def reset_counters():
     smb_counts.clear()
     dns_client_counts.clear()
     dns_domain_counts.clear()
+    dns_resolver_pairs.clear()
     scan_tracker.clear()
     active_scan_alerts.clear()
     active_ids_alerts.clear()
@@ -302,6 +309,23 @@ def is_dns_infra(ip):
     return ip in set(ARGS.dns_server or [])
 
 
+def record_dns_resolver(src, dst, src_port, dest_port, dns):
+    """Learn a client/resolver pair from DNS evidence without global port rules."""
+    if not src or not dst or not isinstance(dns, dict):
+        return
+    dns_type = str(dns.get("type", "")).lower()
+    if dns_type == "response" or str(src_port) == "53":
+        pair = (dst, src)
+    elif dns_type == "request" or str(dest_port) == "53":
+        pair = (src, dst)
+    else:
+        return
+    dns_resolver_pairs.add(pair)
+    existing = scan_tracker.get(pair)
+    if existing:
+        existing["ports"].discard(53)
+
+
 def detect_scan(src, dst, dport):
     if not src or not dst or not dport:
         return
@@ -312,6 +336,9 @@ def detect_scan(src, dst, dport):
         return
 
     if ARGS.ignore_dns_scans and dport in DNS_PORTS:
+        return
+
+    if dport in DNS_PORTS and (src, dst) in dns_resolver_pairs:
         return
 
     if dport in DNS_PORTS and (is_dns_infra(src) or is_dns_infra(dst)):
@@ -428,6 +455,7 @@ def summarize(e):
     if et == "dns":
         dns = e.get("dns", {})
         q = dns_query_name(dns)
+        record_dns_resolver(src, dst, sp, dp, dns)
 
         if src:
             dns_client_counts[src] += 1

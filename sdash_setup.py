@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from sdash_defaults import FACTORY_DEFAULTS, default_config_path, effective_config, save_user_config
+from core.sdash_defaults import FACTORY_DEFAULTS, default_config_path, effective_config, save_user_config
 
 
 APP_TITLE = "SURICATA LIVE DASHBOARD v3.5 - PRIZM BUILD SETUP"
